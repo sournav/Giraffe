@@ -2,3 +2,4 @@
 *.pdb
 lib
 langref.html
+zig-cache
