@@ -57,6 +57,7 @@ pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime
         }
         pub fn GetNodesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(node_type) {
             var data = ArrayList(node_type).init(self.allocator);
+            data.deinit();
             for (ids.items) |id| {
                 if (!self.node_data.contains(id)) {
                     return graph_err.NodesDoNotExist;
@@ -67,6 +68,7 @@ pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime
         }
         pub fn GetEdgesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(edge_type) {
             var data = ArrayList(edge_type).init(self.allocator);
+            data.deinit();
             for (ids.items) |id| {
                 if (!self.edge_data.contains(id)) {
                     return graph_err.EdgesDoNotExist;
