@@ -84,6 +84,7 @@ test "nominal-AddNode" {
     testing.expect(data_graph.graph.graph.count() == 1);
     testing.expect(data_graph.node_data.count()==1);
     testing.expect(data_graph.node_data.get(3).? == 4);
+    try graph.deinit();
 }
 test "nominal-AddEdge" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
