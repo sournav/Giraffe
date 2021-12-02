@@ -5,12 +5,16 @@ const ArrayList = std.ArrayList;
 const AutoArrayHashMap = std.AutoArrayHashMap;
 const mem = std.mem;
 const alloc = std.heap.page_allocator;
+
+
 pub const GraphError = error{
     NodeAlreadyExists,
     EdgeAlreadyExists,
     NodesDoNotExist,
     EdgesDoNotExist
 };
+
+
 pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) type{
     return struct {
         const Self = @This();
@@ -153,14 +157,21 @@ pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) 
                 }
             }
         }
-        pub fn GetNeighbors(self: *Self, id: index_type) AutoArrayHashMap(index_type,index_type) {
+        pub fn GetNeighbors(self: *Self, id: index_type) !AutoArrayHashMap(index_type,index_type) {
+            if (!self.graph.contains(id)) {
+                return GraphError.NodesDoNotExist;
+            }
             return self.graph.get(id).?;
         }
-        pub fn GetEdgeWeight(self: *Self, id: index_type) weight_type {
-            return edges.get(id).?;
+        pub fn GetEdgeWeight(self: *Self, id: index_type) !weight_type {
+            if (!self.edges.contains(id)) {
+                return GraphError.EdgesDoNotExist;
+            }
+            return self.edges.get(id).?;
         }
     };
 }
+
 
 test "nominal-AddNode" {
     var graph = Graph(u32, u32, true).init(alloc);
@@ -316,4 +327,47 @@ test "offnominal-RemoveEdgesBetween" {
     testing.expect(if (graph.RemoveEdgesBetween(5,4)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
     try graph.deinit();
     
+}
+test "nominal-GetNeighbors" {
+    var graph = Graph(u32, u32, true).init(alloc);
+    try graph.AddNode(2);
+    try graph.AddNode(3);
+    try graph.AddNode(4);
+    try graph.AddEdge(1,2,3,4);
+    try graph.AddEdge(2,2,4,5);
+    var neighbors = try graph.GetNeighbors(2);
+    testing.expect(neighbors.get(1).? == 3);
+    testing.expect(neighbors.get(2).? == 4);
+    try graph.deinit();
+}
+test "offnominal-GetNeighbors" {
+    var graph = Graph(u32, u32, true).init(alloc);
+    try graph.AddNode(2);
+    try graph.AddNode(3);
+    try graph.AddNode(4);
+    try graph.AddEdge(1,2,3,4);
+    try graph.AddEdge(2,2,4,5);
+    testing.expect(if (graph.GetNeighbors(6)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
+    try graph.deinit();
+}
+test "nominal-GetEdgeWeight" {
+    var graph = Graph(u32, u32, true).init(alloc);
+    try graph.AddNode(2);
+    try graph.AddNode(3);
+    try graph.AddNode(4);
+    try graph.AddEdge(1,2,3,4);
+    try graph.AddEdge(2,2,4,5);
+    var weight = try graph.GetEdgeWeight(2);
+    testing.expect(weight == 5);
+    try graph.deinit();
+}
+test "offnominal-GetEdgeWeight" {
+    var graph = Graph(u32, u32, true).init(alloc);
+    try graph.AddNode(2);
+    try graph.AddNode(3);
+    try graph.AddNode(4);
+    try graph.AddEdge(1,2,3,4);
+    try graph.AddEdge(2,2,4,5);
+    testing.expect(if (graph.GetEdgeWeight(4)) |_| unreachable else |err| err == GraphError.EdgesDoNotExist);
+    try graph.deinit();
 }

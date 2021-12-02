@@ -6,6 +6,8 @@ const testing = std.testing;
 const AutoArrayHashMap = std.AutoArrayHashMap;
 const mem = std.mem;
 const pg_alloc = std.heap.page_allocator;
+
+
 pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime node_type: type, comptime edge_type: type, directed: bool) type {
     return struct {
         const Self = @This();
@@ -52,6 +54,26 @@ pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime
             }
             _ = self.node_data.remove(id);
             return removed_edges;
+        }
+        pub fn GetNodesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(node_type) {
+            var data = ArrayList(node_type).init(self.allocator);
+            for (ids.items) |id| {
+                if (!self.node_data.contains(id)) {
+                    return graph_err.NodesDoNotExist;
+                }
+                try data.append(self.node_data.get(id).?);
+            }
+            return data;
+        }
+        pub fn GetEdgesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(edge_type) {
+            var data = ArrayList(edge_type).init(self.allocator);
+            for (ids.items) |id| {
+                if (!self.edge_data.contains(id)) {
+                    return graph_err.EdgesDoNotExist;
+                }
+                try data.append(self.edge_data.get(id).?);
+            }
+            return data;
         }
     };
 }
@@ -123,4 +145,48 @@ test "offnominal-RemoveEdgesBetween" {
     try data_graph.AddEdge(1,3,4,5,6);
     try data_graph.AddEdge(2,3,4,5,6);
     testing.expect(if (data_graph.RemoveEdgesBetween(4,5)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+}
+test "nominal-GetNodesData" {
+    var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
+    try data_graph.AddNode(3,4);
+    try data_graph.AddNode(4,5);
+    var arr = ArrayList(u32).init(pg_alloc);
+    try arr.append(3);
+    try arr.append(4);
+    var node_data = try data_graph.GetNodesData(arr);
+    testing.expect(node_data.items[0] == 4);
+    testing.expect(node_data.items[1] == 5);
+}
+test "offnominal-GetNodesData" {
+    var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
+    try data_graph.AddNode(3,4);
+    try data_graph.AddNode(4,5);
+    var arr = ArrayList(u32).init(pg_alloc);
+    try arr.append(1);
+    try arr.append(7);
+    testing.expect(if (data_graph.GetNodesData(arr)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+}
+test "nominal-GetEdgesData" {
+    var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
+    try data_graph.AddNode(3,4);
+    try data_graph.AddNode(4,5);
+    try data_graph.AddEdge(1,3,4,5,6);
+    try data_graph.AddEdge(2,3,4,5,7);
+    var arr = ArrayList(u32).init(pg_alloc);
+    try arr.append(1);
+    try arr.append(2);
+    var node_data = try data_graph.GetEdgesData(arr);
+    testing.expect(node_data.items[0] == 6);
+    testing.expect(node_data.items[1] == 7);
+}
+test "offnominal-GetEdgesData" {
+    var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
+    try data_graph.AddNode(3,4);
+    try data_graph.AddNode(4,5);
+    try data_graph.AddEdge(1,3,4,5,6);
+    try data_graph.AddEdge(2,3,4,5,7);
+    var arr = ArrayList(u32).init(pg_alloc);
+    try arr.append(1);
+    try arr.append(7);
+    testing.expect(if (data_graph.GetEdgesData(arr)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
 }
