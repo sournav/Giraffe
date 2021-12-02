@@ -102,7 +102,6 @@ pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) 
             var node_iterator = node_list.?.iterator();
             while (node_iterator.next()) |entry| {
                 var edge = entry.key_ptr.*;
-                var node = entry.value_ptr.*;
                 try self.RemoveEdgeById(edge);
                 try edges_removed.append(edge);
             }
