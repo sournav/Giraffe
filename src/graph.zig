@@ -5,7 +5,7 @@ const ArrayList = std.ArrayList;
 const AutoArrayHashMap = std.AutoArrayHashMap;
 const mem = std.mem;
 const alloc = std.heap.page_allocator;
-const GraphError = error{
+pub const GraphError = error{
     NodeAlreadyExists,
     EdgeAlreadyExists,
     NodesDoNotExist,
@@ -59,33 +59,39 @@ pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) 
             }
             try self.edge_list.put(id,[2]index_type{n1_id,n2_id});
         }
-        pub fn RemoveNode(self: *Self, id: index_type) !void {
+        pub fn RemoveNode(self: *Self, id: index_type) !ArrayList(index_type) {
            if (!self.graph.contains(id)) {
                return GraphError.NodesDoNotExist;
            }
            if (self.directed) {
-               try self.RemoveNodeDirected(id);
+               return self.RemoveNodeDirected(id);
            }
            else {
-               try self.RemoveNodeUndirected(id);
+               return self.RemoveNodeUndirected(id);
            }
         }
-        fn RemoveNodeUndirected(self: *Self, id: index_type) !void {
+        fn RemoveNodeUndirected(self: *Self, id: index_type) !ArrayList(index_type) {
             var n1_remove = self.graph.get(id);
             var iterator_n1 = n1_remove.?.iterator();
+            var edges_removed = ArrayList(index_type).init(self.allocator);
             while (iterator_n1.next()) |entry| {
                 var node = entry.value;
                 var edge = entry.key;
                 try self.RemoveEdgeById(edge);
+                try edges_removed.append(edge);
             }
             _ = self.graph.remove(id);
+            return edges_removed;
         }
-        fn RemoveNodeDirected(self: *Self, id: index_type) !void {
+        fn RemoveNodeDirected(self: *Self, id: index_type) !ArrayList(index_type) {
             var iterator = self.graph.iterator();
             const stdout = std.io.getStdOut().outStream();
+            var edges_removed = ArrayList(index_type).init(self.allocator);
             while (iterator.next()) |entry| {
                 var node = entry.key;
-                try self.RemoveEdgesBetween(node,id);
+                var removal = try self.RemoveEdgesBetween(node,id);
+                try edges_removed.appendSlice(removal.items);
+                removal.deinit();
             }
             var node_list = self.graph.get(id);
             var node_iterator = node_list.?.iterator();
@@ -93,13 +99,17 @@ pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) 
                 var edge = entry.key;
                 var node = entry.value;
                 try self.RemoveEdgeById(edge);
+                try edges_removed.append(edge);
             }
             _ = self.graph.remove(id);
+            return edges_removed;
         }
-        pub fn RemoveEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !void {
+        pub fn RemoveEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
+            
             if (!self.graph.contains(n1_id) or !self.graph.contains(n2_id)) {
                 return GraphError.NodesDoNotExist;
             }
+            var edges_removed = ArrayList(index_type).init(self.allocator);
             var n1_remove = self.graph.get(n1_id);
             var iterator_n1 = n1_remove.?.iterator();
             var replacement = n1_remove;
@@ -108,8 +118,10 @@ pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) 
                 var edge = entry.key;
                 if (node == n2_id) {
                     try self.RemoveEdgeById(edge);
+                    try edges_removed.append(edge);
                 }
             }  
+            return edges_removed;
         }
         pub fn RemoveEdgeById(self: *Self, id: index_type) !void {
             if (!self.edges.contains(id)) {
@@ -126,6 +138,7 @@ pub fn Graph (comptime index_type: type, comptime weight_type: type, dir: bool) 
             }
             _ = self.edges.remove(id);
             _ = self.edge_list.remove(id);
+
         }
         pub fn Print(self: *Self) !void {
             var iterator = self.graph.iterator();
@@ -209,7 +222,7 @@ test "nominal-RemoveNodeDirected" {
     try graph.AddNode(3);
     try graph.AddEdge(1,2,3,4);
     try graph.AddEdge(2,3,2,5);
-    try graph.RemoveNode(2);
+    _= try graph.RemoveNode(2);
     
     testing.expect(graph.edges.count() == 0);
     testing.expect(graph.graph.count() == 1);
@@ -223,7 +236,8 @@ test "nominal-RemoveNodeUndirected" {
     try graph.AddNode(3);
     try graph.AddEdge(1,2,3,4);
     try graph.AddEdge(2,3,2,5);
-    try graph.RemoveNode(2);
+    var edges = try graph.RemoveNode(2);
+    testing.expect(edges.items.len == 2);
     testing.expect(graph.edges.count() == 0);
     testing.expect(graph.graph.count() == 1);
     testing.expect(graph.graph.get(3).?.count() == 0);
@@ -283,7 +297,7 @@ test "nominal-RemoveEdgesBetween" {
     try graph.AddNode(3);
     try graph.AddEdge(1,2,3,4);
     try graph.AddEdge(2,3,2,5);
-    try graph.RemoveEdgesBetween(2,3);
+    _ = try graph.RemoveEdgesBetween(2,3);
     testing.expect(graph.edges.count() == 0);
     var edge_list = graph.graph.get(2).?;
     testing.expect(edge_list.count() == 0);
