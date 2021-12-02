@@ -24,7 +24,7 @@ pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime
             };
         }
         pub fn deinit(self: *Self) !void {
-            self.graph.deinit();
+            try self.graph.deinit();
             self.node_data.deinit();
             self.edge_data.deinit();
         }
@@ -84,7 +84,7 @@ test "nominal-AddNode" {
     testing.expect(data_graph.graph.graph.count() == 1);
     testing.expect(data_graph.node_data.count()==1);
     testing.expect(data_graph.node_data.get(3).? == 4);
-    try graph.deinit();
+    try data_graph.deinit();
 }
 test "nominal-AddEdge" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
