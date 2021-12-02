@@ -13,6 +13,6 @@ pub fn main() !void {
     try thing.AddEdge(5,1,2,4);
     try thing.AddNode(3);
     try thing.AddEdge(4,1,3,3);
-    try thing.RemoveEdgesBetween(1,3);
+    _ = try thing.RemoveEdgesBetween(1,3);
     try thing.Print();
 }

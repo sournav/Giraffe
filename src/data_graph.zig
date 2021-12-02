@@ -38,21 +38,21 @@ pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime
         }
         pub fn RemoveEdgeById(self: *Self, id:index_type) !void{
             try self.graph.RemoveEdgeById(id);
-            _ = self.edge_data.remove(id);
+            _ = self.edge_data.orderedRemove(id);
         }
         pub fn RemoveEdgesBetween(self: *Self, n1:index_type, n2:index_type) !ArrayList(index_type) {
             var removed_edges = try self.graph.RemoveEdgesBetween(n1,n2);
             for (removed_edges.items) |edge| {
-                _ = self.edge_data.remove(edge);
+                _ = self.edge_data.orderedRemove(edge);
             }
             return removed_edges;
         }
         pub fn RemoveNode(self: *Self, id: index_type) !ArrayList(index_type) {
             var removed_edges = try self.graph.RemoveNode(id);
             for (removed_edges.items) |edge| {
-                _ = self.edge_data.remove(edge);
+                _ = self.edge_data.orderedRemove(edge);
             }
-            _ = self.node_data.remove(id);
+            _ = self.node_data.orderedRemove(id);
             return removed_edges;
         }
         pub fn GetNodesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(node_type) {
@@ -83,9 +83,9 @@ pub fn DataGraph(comptime index_type: type, comptime weight_type: type, comptime
 test "nominal-AddNode" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
     try data_graph.AddNode(3,4);
-    testing.expect(data_graph.graph.graph.count() == 1);
-    testing.expect(data_graph.node_data.count()==1);
-    testing.expect(data_graph.node_data.get(3).? == 4);
+    try testing.expect(data_graph.graph.graph.count() == 1);
+    try testing.expect(data_graph.node_data.count()==1);
+    try testing.expect(data_graph.node_data.get(3).? == 4);
     try data_graph.deinit();
 }
 test "nominal-AddEdge" {
@@ -93,12 +93,12 @@ test "nominal-AddEdge" {
     try data_graph.AddNode(3,4);
     try data_graph.AddNode(4,5);
     try data_graph.AddEdge(1,3,4,5,6);
-    testing.expect(data_graph.edge_data.get(1).? == 6);
+    try testing.expect(data_graph.edge_data.get(1).? == 6);
 }
 test "offnominal-AddNode" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
     try data_graph.AddNode(3,4);
-    testing.expect(if (data_graph.AddNode(3,4)) |_| unreachable else |err| err == graph_err.NodeAlreadyExists);
+    try testing.expect(if (data_graph.AddNode(3,4)) |_| unreachable else |err| err == graph_err.NodeAlreadyExists);
 }
 test "nominal-RemoveNode" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -106,15 +106,15 @@ test "nominal-RemoveNode" {
     try data_graph.AddNode(4,4);
     try data_graph.AddEdge(1,3,4,5,6);
     var edges = try data_graph.RemoveNode(3);
-    testing.expect(data_graph.graph.graph.count() == 1);
-    testing.expect(data_graph.node_data.count()==1);
-    testing.expect(data_graph.edge_data.count()==0);
-    testing.expect(edges.items.len == 1);
+    try testing.expect(data_graph.graph.graph.count() == 1);
+    try testing.expect(data_graph.node_data.count()==1);
+    try testing.expect(data_graph.edge_data.count()==0);
+    try testing.expect(edges.items.len == 1);
 }
 test "offnominal-RemoveNode" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
     try data_graph.AddNode(3,4);
-    testing.expect(if (data_graph.RemoveNode(2)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+    try testing.expect(if (data_graph.RemoveNode(2)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
 }
 test "nominal-RemoveEdgeById" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -122,14 +122,14 @@ test "nominal-RemoveEdgeById" {
     try data_graph.AddNode(4,4);
     try data_graph.AddEdge(1,3,4,5,6);
     try data_graph.RemoveEdgeById(1);
-    testing.expect(data_graph.edge_data.count()==0);
+    try testing.expect(data_graph.edge_data.count()==0);
 }
 test "offnominal-RemoveEdgeById" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
     try data_graph.AddNode(3,4);
     try data_graph.AddNode(4,4);
     try data_graph.AddEdge(1,3,4,5,6);
-    testing.expect(if (data_graph.RemoveEdgeById(2)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
+    try testing.expect(if (data_graph.RemoveEdgeById(2)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
 }
 test "nominal-RemoveEdgesBetween" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -138,8 +138,8 @@ test "nominal-RemoveEdgesBetween" {
     try data_graph.AddEdge(1,3,4,5,6);
     try data_graph.AddEdge(2,3,4,5,6);
     var edges =  try data_graph.RemoveEdgesBetween(3,4);
-    testing.expect(data_graph.edge_data.count()==0);
-    testing.expect(edges.items.len==2);
+    try testing.expect(data_graph.edge_data.count()==0);
+    try testing.expect(edges.items.len==2);
 }
 test "offnominal-RemoveEdgesBetween" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -147,7 +147,7 @@ test "offnominal-RemoveEdgesBetween" {
     try data_graph.AddNode(4,4);
     try data_graph.AddEdge(1,3,4,5,6);
     try data_graph.AddEdge(2,3,4,5,6);
-    testing.expect(if (data_graph.RemoveEdgesBetween(4,5)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+    try testing.expect(if (data_graph.RemoveEdgesBetween(4,5)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
 }
 test "nominal-GetNodesData" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -157,8 +157,8 @@ test "nominal-GetNodesData" {
     try arr.append(3);
     try arr.append(4);
     var node_data = try data_graph.GetNodesData(arr);
-    testing.expect(node_data.items[0] == 4);
-    testing.expect(node_data.items[1] == 5);
+    try testing.expect(node_data.items[0] == 4);
+    try testing.expect(node_data.items[1] == 5);
 }
 test "offnominal-GetNodesData" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -167,7 +167,7 @@ test "offnominal-GetNodesData" {
     var arr = ArrayList(u32).init(pg_alloc);
     try arr.append(1);
     try arr.append(7);
-    testing.expect(if (data_graph.GetNodesData(arr)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+    try testing.expect(if (data_graph.GetNodesData(arr)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
 }
 test "nominal-GetEdgesData" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -179,8 +179,8 @@ test "nominal-GetEdgesData" {
     try arr.append(1);
     try arr.append(2);
     var node_data = try data_graph.GetEdgesData(arr);
-    testing.expect(node_data.items[0] == 6);
-    testing.expect(node_data.items[1] == 7);
+    try testing.expect(node_data.items[0] == 6);
+    try testing.expect(node_data.items[1] == 7);
 }
 test "offnominal-GetEdgesData" {
     var data_graph = DataGraph(u32, u32, u64, u64, true).init(pg_alloc);
@@ -191,5 +191,5 @@ test "offnominal-GetEdgesData" {
     var arr = ArrayList(u32).init(pg_alloc);
     try arr.append(1);
     try arr.append(7);
-    testing.expect(if (data_graph.GetEdgesData(arr)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
+    try testing.expect(if (data_graph.GetEdgesData(arr)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
 }
