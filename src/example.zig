@@ -1,6 +1,6 @@
 const giraffe_graph = @import("graph.zig");
 const std = @import("std");
-const alloc = std.heap.page_allocator;
+const alloc = std.testing.allocator;
 pub fn main() !void {  
     //Type of node/edge id, type of weight, is directed
     var thing = giraffe_graph.Graph(u32,u32,true).init(alloc);
