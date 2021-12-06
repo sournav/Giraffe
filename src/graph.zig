@@ -38,7 +38,7 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             self.graph.deinit();
             self.edge_list.deinit();
         }
-        pub fn AddNode(self: *Self, id: index_type) !void {
+        pub fn addNode(self: *Self, id: index_type) !void {
             if (!self.graph.contains(id)) {
                 try self.graph.put(id, AutoArrayHashMap(index_type, index_type).init(self.allocator));
             }
@@ -46,7 +46,7 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                 return GraphError.NodeAlreadyExists;
             }   
         }
-        pub fn AddEdge(self: *Self, id: index_type, n1_id: index_type, n2_id: index_type) !void {
+        pub fn addEdge(self: *Self, id: index_type, n1_id: index_type, n2_id: index_type) !void {
             if (self.edge_list.contains(id)) {
                 return GraphError.EdgeAlreadyExists;
             }
@@ -63,18 +63,18 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             }
             try self.edge_list.put(id,[2]index_type{n1_id,n2_id});
         }
-        pub fn RemoveNode(self: *Self, id: index_type) !ArrayList(index_type) {
+        pub fn removeNodeWithEdges(self: *Self, id: index_type) !ArrayList(index_type) {
            if (!self.graph.contains(id)) {
                return GraphError.NodesDoNotExist;
            }
            if (self.directed) {
-               return self.RemoveNodeDirected(id);
+               return self.removeNodeWithEdgesDirected(id);
            }
            else {
-               return self.RemoveNodeUndirected(id);
+               return self.removeNodeWithEdgesUndirected(id);
            }
         }
-        fn RemoveNodeUndirected(self: *Self, id: index_type) !ArrayList(index_type) {
+        fn removeNodeWithEdgesUndirected(self: *Self, id: index_type) !ArrayList(index_type) {
             var n1_remove = self.graph.get(id);
             var iterator_n1 = n1_remove.?.iterator();
             var edges_removed = ArrayList(index_type).init(self.allocator);
@@ -83,18 +83,18 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                 try edges_removed.append(edge);
             }
             for (edges_removed.items) |index| {
-                try self.RemoveEdgeById(index);
+                try self.removeEdgeByID(index);
             }
             n1_remove.?.deinit();
             _ = self.graph.swapRemove(id);
             return edges_removed;
         }
-        fn RemoveNodeDirected(self: *Self, id: index_type) !ArrayList(index_type) {
+        fn removeNodeWithEdgesDirected(self: *Self, id: index_type) !ArrayList(index_type) {
             var iterator = self.graph.iterator();
             var edges_removed = ArrayList(index_type).init(self.allocator);
             while (iterator.next()) |entry| {
                 var node = entry.key_ptr.*;
-                var removal = try self.RemoveEdgesBetween(node,id);
+                var removal = try self.removeEdgesBetween(node,id);
                 try edges_removed.appendSlice(removal.items);
                 removal.deinit();
             }
@@ -102,14 +102,14 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             var node_iterator = node_list.?.iterator();
             while (node_iterator.next()) |entry| {
                 var edge = entry.key_ptr.*;
-                try self.RemoveEdgeById(edge);
+                try self.removeEdgeByID(edge);
                 try edges_removed.append(edge);
             }
             node_list.?.deinit();
             _ = self.graph.swapRemove(id);
             return edges_removed;
         }
-        pub fn RemoveEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
+        pub fn removeEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
             
             if (!self.graph.contains(n1_id) or !self.graph.contains(n2_id)) {
                 return GraphError.NodesDoNotExist;
@@ -124,11 +124,11 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                 }
             }
             for (edges_removed.items) |index| {
-                try self.RemoveEdgeById(index);
+                try self.removeEdgeByID(index);
             }  
             return edges_removed;
         }
-        pub fn RemoveEdgeById(self: *Self, id: index_type) !void {
+        pub fn removeEdgeByID(self: *Self, id: index_type) !void {
             if (!self.edge_list.contains(id)) {
                 return GraphError.EdgesDoNotExist;
             }
@@ -143,7 +143,7 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             }
             _ = self.edge_list.swapRemove(id);
         }
-        pub fn Print(self: *Self) !void {
+        pub fn print(self: *Self) !void {
             var iterator = self.graph.iterator();
             while (iterator.next()) |entry| {
                 std.debug.print("Node: {}\n", .{entry.key_ptr.*});
@@ -160,7 +160,7 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             }
             return self.graph.get(id).?;
         }
-        pub fn GetEdgeWeight(self: *Self, id: index_type) !u32 {
+        pub fn getEdgeWeight(self: *Self, id: index_type) !u32 {
             if (!self.edge_list.contains(id)) {
                 return GraphError.EdgesDoNotExist;
             }
@@ -170,25 +170,25 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
 }
 
 
-test "nominal-AddNode" {
+test "nominal-addNode" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
+    try graph.addNode(2);
     try testing.expect(graph.graph.count() == 1);
     try testing.expect(graph.graph.contains(2));
     try graph.deinit();
 }
-test "offnominal-AddNode" {
+test "offnominal-addNode" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try testing.expect(if (graph.AddNode(2)) |_| unreachable else |err| err == GraphError.NodeAlreadyExists);
+    try graph.addNode(2);
+    try testing.expect(if (graph.addNode(2)) |_| unreachable else |err| err == GraphError.NodeAlreadyExists);
     try graph.deinit();
 }
-test "nominal-AddEdgeDirected" {
+test "nominal-addEdgeDirected" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
     try testing.expect(graph.edge_list.count() == 2);
     var edge_list = graph.graph.get(2).?;
     try testing.expect(edge_list.count() == 1);
@@ -197,20 +197,20 @@ test "nominal-AddEdgeDirected" {
     try testing.expect(graph.edge_list.count() == 2);
     try graph.deinit();
 }
-test "offnominal-AddEdge" {
+test "offnominal-addEdge" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try testing.expect(if (graph.AddEdge(1,2,3)) |_| unreachable else |err| err == GraphError.EdgeAlreadyExists);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try testing.expect(if (graph.addEdge(1,2,3)) |_| unreachable else |err| err == GraphError.EdgeAlreadyExists);
     try graph.deinit();
 }
-test "nominal-AddEdgeUndirected" {
+test "nominal-addEdgeUndirected" {
     var graph = Graph(u32, false).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
     try testing.expect(graph.edge_list.count() == 2);
     var edge_list = graph.graph.get(2).?;
     try testing.expect(edge_list.count() == 2);
@@ -218,13 +218,13 @@ test "nominal-AddEdgeUndirected" {
     try testing.expect(edge_list.count() == 2);
     try graph.deinit();
 }
-test "nominal-RemoveNodeDirected" {
+test "nominal-removeNodeWithEdgesDirected" {
      var graph = Graph(u32, true).init(alloc);
-     try graph.AddNode(2);
-     try graph.AddNode(3);
-     try graph.AddEdge(1,2,3);
-     try graph.AddEdge(2,3,2);
-     var edge_list = try graph.RemoveNode(2);
+     try graph.addNode(2);
+     try graph.addNode(3);
+     try graph.addEdge(1,2,3);
+     try graph.addEdge(2,3,2);
+     var edge_list = try graph.removeNodeWithEdges(2);
      edge_list.deinit();
      try testing.expect(graph.edge_list.count() == 0);
      try testing.expect(graph.graph.count() == 1);
@@ -232,13 +232,13 @@ test "nominal-RemoveNodeDirected" {
      try testing.expect(graph.edge_list.count() == 0);
      try graph.deinit();
  }
- test "nominal-RemoveNodeUndirected" {
+ test "nominal-removeNodeWithEdgesUndirected" {
      var graph = Graph(u32, false).init(alloc);
-     try graph.AddNode(2);
-     try graph.AddNode(3);
-     try graph.AddEdge(1,2,3);
-     try graph.AddEdge(2,3,2);
-     var edges = try graph.RemoveNode(2);
+     try graph.addNode(2);
+     try graph.addNode(3);
+     try graph.addEdge(1,2,3);
+     try graph.addEdge(2,3,2);
+     var edges = try graph.removeNodeWithEdges(2);
      try testing.expect(edges.items.len == 2);
      try testing.expect(graph.edge_list.count() == 0);
      try testing.expect(graph.graph.count() == 1);
@@ -247,21 +247,21 @@ test "nominal-RemoveNodeDirected" {
      try graph.deinit();
      edges.deinit();
 }
-test "offnominal-RemoveNode" {
+test "offnominal-removeNodeWithEdges" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try testing.expect(if (graph.RemoveNode(5)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try testing.expect(if (graph.removeNodeWithEdges(5)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
     try graph.deinit();
 }
-test "nominal-RemoveEdgeByIdDirected" {
+test "nominal-removeEdgeByIDDirected" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
-    try graph.RemoveEdgeById(2);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
+    try graph.removeEdgeByID(2);
     try testing.expect(graph.edge_list.count() == 1);
     var edge_list = graph.graph.get(2).?;
     try testing.expect(edge_list.count() == 1);
@@ -270,14 +270,14 @@ test "nominal-RemoveEdgeByIdDirected" {
     try testing.expect(graph.edge_list.count() == 1);
     try graph.deinit();
 }
-test "nominal-RemoveEdgeByIdUndirected" {
+test "nominal-removeEdgeByIDUndirected" {
     var graph = Graph(u32, false).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
-    try graph.RemoveEdgeById(2);
-    try graph.RemoveEdgeById(1);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
+    try graph.removeEdgeByID(2);
+    try graph.removeEdgeByID(1);
     try testing.expect(graph.edge_list.count() == 0);
     var edge_list = graph.graph.get(2).?;
     try testing.expect(edge_list.count() == 0);
@@ -286,22 +286,22 @@ test "nominal-RemoveEdgeByIdUndirected" {
     try testing.expect(graph.edge_list.count() == 0);
     try graph.deinit();
 }
-test "offnominal-RemoveEdgeById" {
+test "offnominal-removeEdgeByID" {
     var graph = Graph(u32, false).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
-    try testing.expect(if (graph.RemoveEdgeById(5)) |_| unreachable else |err| err == GraphError.EdgesDoNotExist);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
+    try testing.expect(if (graph.removeEdgeByID(5)) |_| unreachable else |err| err == GraphError.EdgesDoNotExist);
     try graph.deinit();
 }
-test "nominal-RemoveEdgesBetween" {
+test "nominal-removeEdgesBetween" {
     var graph = Graph(u32, false).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
-    var edges = try graph.RemoveEdgesBetween(2,3);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
+    var edges = try graph.removeEdgesBetween(2,3);
     edges.deinit();
     var edge_list = graph.graph.get(2).?;
     edge_list = graph.graph.get(3).?;
@@ -309,22 +309,22 @@ test "nominal-RemoveEdgesBetween" {
     try graph.deinit();
     
 }
-test "offnominal-RemoveEdgesBetween" {
+test "offnominal-removeEdgesBetween" {
     var graph = Graph(u32, false).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,3,2);
-    try testing.expect(if (graph.RemoveEdgesBetween(5,4)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,3,2);
+    try testing.expect(if (graph.removeEdgesBetween(5,4)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
     try graph.deinit();
 }
 test "nominal-GetNeighbors" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddNode(4);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,2,4);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addNode(4);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,2,4);
     var neighbors = try graph.GetNeighbors(2);
     try testing.expect(neighbors.get(1).? == 3);
     try testing.expect(neighbors.get(2).? == 4);
@@ -332,32 +332,32 @@ test "nominal-GetNeighbors" {
 }
 test "offnominal-GetNeighbors" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddNode(4);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,2,4);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addNode(4);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,2,4);
     try testing.expect(if (graph.GetNeighbors(6)) |_| unreachable else |err| err == GraphError.NodesDoNotExist);
     try graph.deinit();
 }
-test "nominal-GetEdgeWeight" {
+test "nominal-getEdgeWeight" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddNode(4);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,2,4);
-    var weight = try graph.GetEdgeWeight(2);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addNode(4);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,2,4);
+    var weight = try graph.getEdgeWeight(2);
     try testing.expect(weight == 1);
     try graph.deinit();
 }
-test "offnominal-GetEdgeWeight" {
+test "offnominal-getEdgeWeight" {
     var graph = Graph(u32, true).init(alloc);
-    try graph.AddNode(2);
-    try graph.AddNode(3);
-    try graph.AddNode(4);
-    try graph.AddEdge(1,2,3);
-    try graph.AddEdge(2,2,4);
-    try testing.expect(if (graph.GetEdgeWeight(4)) |_| unreachable else |err| err == GraphError.EdgesDoNotExist);
+    try graph.addNode(2);
+    try graph.addNode(3);
+    try graph.addNode(4);
+    try graph.addEdge(1,2,3);
+    try graph.addEdge(2,2,4);
+    try testing.expect(if (graph.getEdgeWeight(4)) |_| unreachable else |err| err == GraphError.EdgesDoNotExist);
     try graph.deinit();
 }

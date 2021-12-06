@@ -29,33 +29,33 @@ pub fn WeightedGraph (comptime index_type: type, comptime weight_type: type, dir
             try self.graph.deinit();
             self.edge_weights.deinit();
         }
-        pub fn AddNode(self: *Self, id: index_type) !void {
-            return self.graph.AddNode(id);  
+        pub fn addNode(self: *Self, id: index_type) !void {
+            return self.graph.addNode(id);  
         }
-        pub fn AddEdge(self: *Self, id: index_type, n1_id: index_type, n2_id: index_type, w: weight_type) !void {
-            try self.graph.AddEdge(id,n1_id,n2_id);
+        pub fn addEdge(self: *Self, id: index_type, n1_id: index_type, n2_id: index_type, w: weight_type) !void {
+            try self.graph.addEdge(id,n1_id,n2_id);
             try self.edge_weights.put(id,w);
 
         }
-        pub fn RemoveNode(self: *Self, id: index_type) !ArrayList(index_type) {
-           var removed_edges = try self.graph.RemoveNode(id);
+        pub fn removeNodeWithEdges(self: *Self, id: index_type) !ArrayList(index_type) {
+           var removed_edges = try self.graph.removeNodeWithEdges(id);
             for (removed_edges.items) |edge| {
                 _ = self.edge_weights.swapRemove(edge);
             }
             return removed_edges;
         }
-        pub fn RemoveEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
-            var edges_removed = try self.graph.RemoveEdgesBetween(n1_id,n2_id);
+        pub fn removeEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
+            var edges_removed = try self.graph.removeEdgesBetween(n1_id,n2_id);
             for (edges_removed.items) |index| {
                 _ = self.edge_weights.swapRemove(index);
             }  
             return edges_removed;
         }
-        pub fn RemoveEdgeById(self: *Self, id: index_type) !void {
-            try self.graph.RemoveEdgeById(id);
+        pub fn removeEdgeByID(self: *Self, id: index_type) !void {
+            try self.graph.removeEdgeByID(id);
             _ = self.edge_weights.swapRemove(id);
         }
-        pub fn GetEdgeWeight(self: *Self, id: index_type) !weight_type {
+        pub fn getEdgeWeight(self: *Self, id: index_type) !weight_type {
             if (!self.edge_weights.contains(id)) {
                 return graph_err.EdgesDoNotExist;
             }
@@ -65,79 +65,79 @@ pub fn WeightedGraph (comptime index_type: type, comptime weight_type: type, dir
 }
 
 
-test "nominal-AddNode" {
+test "nominal-addNode" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
+    try weighted_graph.addNode(3);
     try testing.expect(weighted_graph.graph.graph.count() == 1);
     try weighted_graph.deinit();
 }
-test "nominal-AddEdge" {
+test "nominal-addEdge" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try weighted_graph.AddNode(4);
-    try weighted_graph.AddEdge(1,3,4,6);
+    try weighted_graph.addNode(3);
+    try weighted_graph.addNode(4);
+    try weighted_graph.addEdge(1,3,4,6);
     try testing.expect(weighted_graph.edge_weights.get(1).? == 6);
     try weighted_graph.deinit();
 }
-test "offnominal-AddNode" {
+test "offnominal-addNode" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try testing.expect(if (weighted_graph.AddNode(3)) |_| unreachable else |err| err == graph_err.NodeAlreadyExists);
+    try weighted_graph.addNode(3);
+    try testing.expect(if (weighted_graph.addNode(3)) |_| unreachable else |err| err == graph_err.NodeAlreadyExists);
     try weighted_graph.deinit();
 }
-test "nominal-RemoveNode" {
+test "nominal-removeNodeWithEdges" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try weighted_graph.AddNode(4);
-    try weighted_graph.AddEdge(1,3,4,6);
-    var edges = try weighted_graph.RemoveNode(3);
+    try weighted_graph.addNode(3);
+    try weighted_graph.addNode(4);
+    try weighted_graph.addEdge(1,3,4,6);
+    var edges = try weighted_graph.removeNodeWithEdges(3);
     try testing.expect(weighted_graph.graph.graph.count() == 1);
     try testing.expect(weighted_graph.edge_weights.count()==0);
     try testing.expect(edges.items.len == 1);
     edges.deinit();
     try weighted_graph.deinit();
 }
-test "offnominal-RemoveNode" {
+test "offnominal-removeNodeWithEdges" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try testing.expect(if (weighted_graph.RemoveNode(2)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+    try weighted_graph.addNode(3);
+    try testing.expect(if (weighted_graph.removeNodeWithEdges(2)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
     try weighted_graph.deinit();
 }
-test "nominal-RemoveEdgeById" {
+test "nominal-removeEdgeByID" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try weighted_graph.AddNode(4);
-    try weighted_graph.AddEdge(1,3,4,6);
-    try weighted_graph.RemoveEdgeById(1);
+    try weighted_graph.addNode(3);
+    try weighted_graph.addNode(4);
+    try weighted_graph.addEdge(1,3,4,6);
+    try weighted_graph.removeEdgeByID(1);
     try testing.expect(weighted_graph.edge_weights.count()==0);
     try weighted_graph.deinit();
 }
-test "offnominal-RemoveEdgeById" {
+test "offnominal-removeEdgeByID" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try weighted_graph.AddNode(4);
-    try weighted_graph.AddEdge(1,3,4,6);
-    try testing.expect(if (weighted_graph.RemoveEdgeById(2)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
+    try weighted_graph.addNode(3);
+    try weighted_graph.addNode(4);
+    try weighted_graph.addEdge(1,3,4,6);
+    try testing.expect(if (weighted_graph.removeEdgeByID(2)) |_| unreachable else |err| err == graph_err.EdgesDoNotExist);
     try weighted_graph.deinit();
 }
-test "nominal-RemoveEdgesBetween" {
+test "nominal-removeEdgesBetween" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try weighted_graph.AddNode(4);
-    try weighted_graph.AddEdge(1,3,4,6);
-    try weighted_graph.AddEdge(2,3,4,6);
-    var edges =  try weighted_graph.RemoveEdgesBetween(3,4);
+    try weighted_graph.addNode(3);
+    try weighted_graph.addNode(4);
+    try weighted_graph.addEdge(1,3,4,6);
+    try weighted_graph.addEdge(2,3,4,6);
+    var edges =  try weighted_graph.removeEdgesBetween(3,4);
     try testing.expect(weighted_graph.edge_weights.count()==0);
     try testing.expect(edges.items.len==2);
     edges.deinit();
     try weighted_graph.deinit();
 }
-test "offnominal-RemoveEdgesBetween" {
+test "offnominal-removeEdgesBetween" {
     var weighted_graph = WeightedGraph(u32, u64, true).init(testing_alloc);
-    try weighted_graph.AddNode(3);
-    try weighted_graph.AddNode(4);
-    try weighted_graph.AddEdge(1,3,4,6);
-    try weighted_graph.AddEdge(2,3,4,6);
-    try testing.expect(if (weighted_graph.RemoveEdgesBetween(4,5)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
+    try weighted_graph.addNode(3);
+    try weighted_graph.addNode(4);
+    try weighted_graph.addEdge(1,3,4,6);
+    try weighted_graph.addEdge(2,3,4,6);
+    try testing.expect(if (weighted_graph.removeEdgesBetween(4,5)) |_| unreachable else |err| err == graph_err.NodesDoNotExist);
     try weighted_graph.deinit();
 }
