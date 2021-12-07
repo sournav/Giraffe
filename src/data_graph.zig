@@ -28,18 +28,26 @@ pub fn DataGraph(comptime index_type: type, comptime node_type: type, comptime e
             self.node_data.deinit();
             self.edge_data.deinit();
         }
+
+        //Adds a node given an index, and node data
         pub fn addNode(self: *Self, node_index: index_type, node_data: node_type) !void {
             try self.graph.addNode(node_index);
             try self.node_data.put(node_index, node_data);
         }
+
+        //Adds an edge given an index, the indices of the nodes being connected (order matters for directed), and an edge type
         pub fn addEdge(self: *Self, id:index_type, n1:index_type, n2: index_type, edge_data: edge_type) !void {
             try self.graph.addEdge(id, n1, n2);
             try self.edge_data.put(id, edge_data);
         }
+
+        //Removes an edge by its ID
         pub fn removeEdgeByID(self: *Self, id:index_type) !void{
             try self.graph.removeEdgeByID(id);
             _ = self.edge_data.orderedRemove(id);
         }
+
+        //Removes the edges between two nodes, note that for directed graphs order matters (only edges from n1 to n2 will be removed for directed)
         pub fn removeEdgesBetween(self: *Self, n1:index_type, n2:index_type) !ArrayList(index_type) {
             var removed_edges = try self.graph.removeEdgesBetween(n1,n2);
             for (removed_edges.items) |edge| {
@@ -47,6 +55,8 @@ pub fn DataGraph(comptime index_type: type, comptime node_type: type, comptime e
             }
             return removed_edges;
         }
+
+        //Removes a node with all of its edges
         pub fn removeNodeWithEdges(self: *Self, id: index_type) !ArrayList(index_type) {
             var removed_edges = try self.graph.removeNodeWithEdges(id);
             for (removed_edges.items) |edge| {
@@ -55,6 +65,8 @@ pub fn DataGraph(comptime index_type: type, comptime node_type: type, comptime e
             _ = self.node_data.orderedRemove(id);
             return removed_edges;
         }
+
+        //Gets the data of all nodes with indices given by an array list
         pub fn getNodesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(node_type) {
             var data = ArrayList(node_type).init(self.allocator);
             data.deinit();
@@ -67,6 +79,8 @@ pub fn DataGraph(comptime index_type: type, comptime node_type: type, comptime e
             }
             return data;
         }
+
+        //Gets the data of all edges with indices given by an array list
         pub fn getEdgesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(edge_type) {
             var data = ArrayList(edge_type).init(self.allocator);
             data.deinit();

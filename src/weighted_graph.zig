@@ -26,6 +26,7 @@ pub fn WeightedGraph (comptime index_type: type, comptime weight_type: type, dir
             };
 
         }
+        
         pub fn deinit(self: *Self) !void {
             try self.graph.deinit();
             self.edge_weights.deinit();
