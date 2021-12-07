@@ -28,18 +28,26 @@ pub fn WeightedDataGraph(comptime index_type: type, comptime weight_type: type, 
             self.node_data.deinit();
             self.edge_data.deinit();
         }
+
+        //Adding a node into the graph given an index (id), and data pertaining to the node
         pub fn addNode(self: *Self, node_index: index_type, node_data: node_type) !void {
             try self.graph.addNode(node_index);
             try self.node_data.put(node_index, node_data);
         }
+
+        //Adding an edge into the graph given id, the node indexes being connected, a weight, and some edge data (Note, order matters for directed graphs)
         pub fn addEdge(self: *Self, id:index_type, n1:index_type, n2: index_type, w: weight_type, edge_data: edge_type) !void {
             try self.graph.addEdge(id, n1, n2, w);
             try self.edge_data.put(id, edge_data);
         }
+
+        //Given an ID for an edge removes an edge
         pub fn removeEdgeByID(self: *Self, id:index_type) !void{
             try self.graph.removeEdgeByID(id);
             _ = self.edge_data.orderedRemove(id);
         }
+
+        //Given two nodes n1, and n2 removes the edges between them (Order matters for directed graphs)
         pub fn removeEdgesBetween(self: *Self, n1:index_type, n2:index_type) !ArrayList(index_type) {
             var removed_edges = try self.graph.removeEdgesBetween(n1,n2);
             for (removed_edges.items) |edge| {
@@ -47,6 +55,8 @@ pub fn WeightedDataGraph(comptime index_type: type, comptime weight_type: type, 
             }
             return removed_edges;
         }
+
+        //Removes a node along with all edges connected to it
         pub fn removeNodeWithEdges(self: *Self, id: index_type) !ArrayList(index_type) {
             var removed_edges = try self.graph.removeNodeWithEdges(id);
             for (removed_edges.items) |edge| {
@@ -55,6 +65,8 @@ pub fn WeightedDataGraph(comptime index_type: type, comptime weight_type: type, 
             _ = self.node_data.orderedRemove(id);
             return removed_edges;
         }
+
+        //Gets a list of data given an arraylist of indices of nodes
         pub fn getNodesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(node_type) {
             var data = ArrayList(node_type).init(self.allocator);
             data.deinit();
@@ -67,6 +79,8 @@ pub fn WeightedDataGraph(comptime index_type: type, comptime weight_type: type, 
             }
             return data;
         }
+
+        //Gets a list of data given an arraylist of indices of edges
         pub fn getEdgesData(self: *Self, ids: ArrayList(index_type)) !ArrayList(edge_type) {
             var data = ArrayList(edge_type).init(self.allocator);
             data.deinit();
