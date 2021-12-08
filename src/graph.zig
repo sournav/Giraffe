@@ -38,6 +38,8 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             self.graph.deinit();
             self.edge_list.deinit();
         }
+
+        //Adding a node to the graph via index of node
         pub fn addNode(self: *Self, id: index_type) !void {
             if (!self.graph.contains(id)) {
                 try self.graph.put(id, AutoArrayHashMap(index_type, index_type).init(self.allocator));
@@ -46,6 +48,8 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                 return GraphError.NodeAlreadyExists;
             }   
         }
+
+        //Adding an edge to a graph between nodes n1_id, and n2_id (note that order matters for a directed graph)
         pub fn addEdge(self: *Self, id: index_type, n1_id: index_type, n2_id: index_type) !void {
             if (self.edge_list.contains(id)) {
                 return GraphError.EdgeAlreadyExists;
@@ -63,6 +67,8 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             }
             try self.edge_list.put(id,[2]index_type{n1_id,n2_id});
         }
+
+        //Removes node with all edges going to/fro it
         pub fn removeNodeWithEdges(self: *Self, id: index_type) !ArrayList(index_type) {
            if (!self.graph.contains(id)) {
                return GraphError.NodesDoNotExist;
@@ -74,6 +80,9 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                return self.removeNodeWithEdgesUndirected(id);
            }
         }
+
+        //Removes node with all edges for an undirected graph (is faster than removeNodeWithEdgesDirected)
+        //Use removeNode, do not call this directly
         fn removeNodeWithEdgesUndirected(self: *Self, id: index_type) !ArrayList(index_type) {
             var n1_remove = self.graph.get(id);
             var iterator_n1 = n1_remove.?.iterator();
@@ -86,18 +95,27 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                 try self.removeEdgeByID(index);
             }
             n1_remove.?.deinit();
+
+            //swap remove chosen because its faster than orderedRemove
             _ = self.graph.swapRemove(id);
             return edges_removed;
         }
+
+        //Removes node with all edges for a directed graph
+        //Use removeNode, do not call this directly
         fn removeNodeWithEdgesDirected(self: *Self, id: index_type) !ArrayList(index_type) {
             var iterator = self.graph.iterator();
             var edges_removed = ArrayList(index_type).init(self.allocator);
+
+            //removal of all edges going to the given node
             while (iterator.next()) |entry| {
                 var node = entry.key_ptr.*;
                 var removal = try self.removeEdgesBetween(node,id);
                 try edges_removed.appendSlice(removal.items);
                 removal.deinit();
             }
+
+            //removal of all edges going from the given node
             var node_list = self.graph.get(id);
             var node_iterator = node_list.?.iterator();
             while (node_iterator.next()) |entry| {
@@ -109,6 +127,8 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             _ = self.graph.swapRemove(id);
             return edges_removed;
         }
+
+        //Remove the edges between n1 and n2 (order matters for a directed graph)
         pub fn removeEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
             
             if (!self.graph.contains(n1_id) or !self.graph.contains(n2_id)) {
@@ -128,6 +148,8 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             }  
             return edges_removed;
         }
+
+        //Remove the edge with the given ID
         pub fn removeEdgeByID(self: *Self, id: index_type) !void {
             if (!self.edge_list.contains(id)) {
                 return GraphError.EdgesDoNotExist;
@@ -143,6 +165,8 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             }
             _ = self.edge_list.swapRemove(id);
         }
+
+        //Print the graph
         pub fn print(self: *Self) !void {
             var iterator = self.graph.iterator();
             while (iterator.next()) |entry| {
@@ -154,12 +178,16 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
                 }
             }
         }
+
+        //Get the neighbors of a given node (returns the hashmap in graph hashmap)
         pub fn GetNeighbors(self: *Self, id: index_type) !AutoArrayHashMap(index_type,index_type) {
             if (!self.graph.contains(id)) {
                 return GraphError.NodesDoNotExist;
             }
             return self.graph.get(id).?;
         }
+
+        //Returns 1 as default edge weight
         pub fn getEdgeWeight(self: *Self, id: index_type) !u32 {
             if (!self.edge_list.contains(id)) {
                 return GraphError.EdgesDoNotExist;
