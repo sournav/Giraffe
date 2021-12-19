@@ -68,6 +68,12 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
             try self.edge_list.put(id,[2]index_type{n1_id,n2_id});
         }
 
+        //Remove just the node from the graph hashmap, the edges pointing to it will still be there, 
+        //graph is thust invalid
+        pub fn removeNodeWithoutEdges(self: *Self, id: index_type) !void {
+            _ = try self.graph.swapRemove(id);
+        }
+
         //Removes node with all edges going to/fro it
         pub fn removeNodeWithEdges(self: *Self, id: index_type) !ArrayList(index_type) {
            if (!self.graph.contains(id)) {
@@ -130,7 +136,6 @@ pub fn Graph (comptime index_type: type, dir: bool) type{
 
         //Remove the edges between n1 and n2 (order matters for a directed graph)
         pub fn removeEdgesBetween(self: *Self, n1_id: index_type, n2_id: index_type) !ArrayList(index_type) {
-            
             if (!self.graph.contains(n1_id) or !self.graph.contains(n2_id)) {
                 return GraphError.NodesDoNotExist;
             }
